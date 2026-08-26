@@ -207,13 +207,20 @@ Completed hardening for this contract:
 - ✅ Multisig ownership on Sepolia via [Gnosis Safe](https://safe.global/) (1-of-2) — see [Admin actions when the owner is a multisig](#admin-actions-when-the-owner-is-a-multisig)
 - ✅ Test suite covers minting, capping, pausing, burning, fuzzed transfers, and both the success and failure paths of two-step ownership transfer
 
-Still required before any mainnet deployment involving real value:
+Still required **only if real financial value will ever be at stake**
+(if this stays a testnet/learning project, these are not urgent):
 
-- Transfer ownership to a multisig on BSC and Polygon **mainnet** when deploying there — Gnosis Safe's web app does not support BSC Testnet or Polygon Amoy specifically (testnet coverage is limited to a smaller set of chains, mainly Ethereum testnets), so those two stay single-EOA for now; this is a real platform limitation, not a shortcut
-- Raise the Safe's threshold above 1-of-2 for real production use — 1-of-2 was chosen for ease of testing, not for production security
-- Get an independent, professional security audit — Slither and OpenZeppelin's own audits do not substitute for a human review of this contract's specific logic
-- Rotate any private key that has ever been shared, pasted, or committed anywhere
-- Verify every deployment on its block explorer immediately after deploy (already done for every deployment so far)
+- Get an independent, professional security audit ($5,000–$50,000+ depending on scope) — Slither and OpenZeppelin's own audits do not substitute for a human review of this contract's specific logic. Cheaper/free alternatives worth considering first: community review on the [OpenZeppelin Forum](https://forum.openzeppelin.com/), a competitive audit contest on [Code4rena](https://code4rena.com/) or [Sherlock](https://www.sherlock.xyz/), or a bug bounty via [Immunefi](https://immunefi.com/)
+- Raise the Safe's threshold above 1-of-2 — 1-of-2 was chosen for ease of testing, not production security
+- Rotate any private key that has ever been shared, pasted, or committed anywhere before using it for anything beyond testnets
+
+Required specifically **when deploying to BSC or Polygon mainnet**:
+
+- Transfer ownership to a multisig there too — Gnosis Safe's web app does not support BSC Testnet or Polygon Amoy specifically (testnet coverage is limited to a smaller set of chains, mainly Ethereum testnets), so those two stay single-EOA for now; Safe does support both chains' **mainnets**, so this gap closes automatically once you deploy there
+
+Already done for every deployment so far:
+
+- ✅ Verified every deployment on its block explorer immediately after deploy
 
 ## License
 
