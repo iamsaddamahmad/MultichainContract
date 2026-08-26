@@ -69,4 +69,33 @@ contract MyTokenTest is Test {
         assertEq(token.balanceOf(alice), amount);
         assertEq(token.balanceOf(owner), INITIAL_SUPPLY - amount);
     }
+
+    function testTwoStepOwnershipTransfer() public {
+    address newOwner = address(0x999);
+
+    // Step 1: propose — ownership should NOT change yet
+    token.transferOwnership(newOwner);
+    assertEq(token.owner(), owner); // still the original owner
+    assertEq(token.pendingOwner(), newOwner);
+
+    // Step 2: accept — must be called BY the new owner
+    vm.prank(newOwner);
+    token.acceptOwnership();
+    assertEq(token.owner(), newOwner);
+    }
+
+    function testOwnershipTransferRequiresAcceptance() public {
+    address newOwner = address(0x999);
+    address randomAddress = address(0x888);
+
+    token.transferOwnership(newOwner);
+
+    // Someone who isn't the pending owner cannot accept on their behalf
+    vm.prank(randomAddress);
+    vm.expectRevert();
+    token.acceptOwnership();
+
+    // Ownership still hasn't changed
+    assertEq(token.owner(), owner);
+    }
 }

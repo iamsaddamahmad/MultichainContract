@@ -147,15 +147,33 @@ cast call <CONTRACT_ADDRESS> "pendingOwner()(address)" --rpc-url <network>
 If step 2 never happens, ownership stays exactly where it was — a mistyped
 or unreachable new-owner address cannot lock you out, unlike plain `Ownable`.
 
+## Admin actions when the owner is a multisig
+
+The Sepolia deployment's owner is a [Gnosis Safe](https://safe.global/)
+(1-of-2), not a single wallet. Once ownership is a Safe, `mint()`, `pause()`,
+and `unpause()` can no longer be called with a plain `cast send` and a
+private key — they must go through the Safe:
+
+1. Go to the Safe's dashboard at [app.safe.global](https://app.safe.global/)
+2. **New Transaction** → **Contract Interaction**
+3. Paste the token's address and (if not auto-detected) its ABI from the
+   verified explorer page
+4. Select the function (`mint`, `pause`, `unpause`) and fill in any arguments
+5. Sign and execute — requires signatures from enough owners to meet the
+   configured threshold
+
+Read-only calls (`owner()`, `balanceOf()`, etc.) work exactly as before via
+`cast call`, since those don't require ownership at all.
+
 ## Deployed addresses
 
 ### Current — production-hardened (Ownable2Step, custom errors, NatSpec)
 
-| Network              | Address                                       | Explorer |
-|-----------------------|------------------------------------------------|----------|
-| Sepolia (testnet)     | `0x4602E3EDc16d24457C7Af5f286e89a43e7575119`   | [View](https://sepolia.etherscan.io/address/0x4602e3edc16d24457c7af5f286e89a43e7575119#code) |
-| BSC Testnet           | `0x4602E3EDc16d24457C7Af5f286e89a43e7575119`   | [View](https://testnet.bscscan.com/address/0x4602e3edc16d24457c7af5f286e89a43e7575119#code) |
-| Polygon Amoy (testnet)| `0x9025521D790e5a507918eCe466eD66023f2C553C`   | [View](https://amoy.polygonscan.com/address/0x9025521d790e5a507918ece466ed66023f2c553c#code) |
+| Network              | Address                                       | Owner | Explorer |
+|-----------------------|------------------------------------------------|-------|----------|
+| Sepolia (testnet)     | `0x4602E3EDc16d24457C7Af5f286e89a43e7575119`   | 🔐 Gnosis Safe multisig (1-of-2): `0xca445f091069772e43DD591F549421e07546ADa0` | [View](https://sepolia.etherscan.io/address/0x4602e3edc16d24457c7af5f286e89a43e7575119#code) |
+| BSC Testnet           | `0x4602E3EDc16d24457C7Af5f286e89a43e7575119`   | EOA (see [Security](#security)) | [View](https://testnet.bscscan.com/address/0x4602e3edc16d24457c7af5f286e89a43e7575119#code) |
+| Polygon Amoy (testnet)| `0x9025521D790e5a507918eCe466eD66023f2C553C`   | EOA (see [Security](#security)) | [View](https://amoy.polygonscan.com/address/0x9025521d790e5a507918ece466ed66023f2c553c#code) |
 
 ### Superseded — earlier version (plain `Ownable`, string reverts)
 
@@ -186,14 +204,16 @@ Completed hardening for this contract:
 - ✅ Custom errors + zero-address checks in constructor and `mint()`
 - ✅ Full NatSpec documentation
 - ✅ Static analysis run with [Slither](https://github.com/crytic/slither) — `slither src/MyToken.sol` reports no High/Medium findings
+- ✅ Multisig ownership on Sepolia via [Gnosis Safe](https://safe.global/) (1-of-2) — see [Admin actions when the owner is a multisig](#admin-actions-when-the-owner-is-a-multisig)
+- ✅ Test suite covers minting, capping, pausing, burning, fuzzed transfers, and both the success and failure paths of two-step ownership transfer
 
 Still required before any mainnet deployment involving real value:
 
-- Replace the single-EOA owner with a multisig (e.g. [Gnosis Safe](https://safe.global/))
+- Transfer BSC Testnet and Polygon Amoy ownership to a multisig too (currently still single-EOA on those two)
+- Raise the Safe's threshold above 1-of-2 for real production use — 1-of-2 was chosen for ease of testing, not for production security
 - Get an independent, professional security audit — Slither and OpenZeppelin's own audits do not substitute for a human review of this contract's specific logic
-- Test extensively on testnet, including edge cases (max supply, pause/unpause, zero-value transfers, ownership transfer)
 - Rotate any private key that has ever been shared, pasted, or committed anywhere
-- Verify every deployment on its block explorer immediately after deploy
+- Verify every deployment on its block explorer immediately after deploy (already done for every deployment so far)
 
 ## License
 
