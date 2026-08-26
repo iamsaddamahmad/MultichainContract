@@ -38,8 +38,8 @@ mainnet equivalent) by swapping the `--rpc-url` flag and `.env` values.
 ## Setup
 
 ```bash
-git clone https://github.com/<your-username>/my-contract.git
-cd my-contract
+git clone https://github.com/iamsaddamahmad/MultichainContract.git
+cd MultichainContract
 forge install
 cp .env.example .env
 ```
@@ -95,11 +95,19 @@ production wallet.
 
 ## Deployed addresses
 
-| Network         | Address                                     | Explorer |
-|------------------|----------------------------------------------|----------|
-| Sepolia (testnet)| `0x91f5B7e55226f983f52B7878671e668C5d4880f3` | [View](https://sepolia.etherscan.io/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
+| Network              | Address                                       | Status     | Explorer |
+|-----------------------|------------------------------------------------|------------|----------|
+| Sepolia (testnet)     | `0x91f5B7e55226f983f52B7878671e668C5d4880f3`   | Active     | [View](https://sepolia.etherscan.io/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
+| BSC Testnet           | `0x91f5B7e55226f983f52B7878671e668C5d4880f3`   | ⏸ Paused (deprecated) | [View](https://testnet.bscscan.com/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
+| BSC Testnet           | `0x9025521D790e5a507918eCe466eD66023f2C553C`   | Active     | [View](https://testnet.bscscan.com/address/0x9025521d790e5a507918ece466ed66023f2c553c#code) |
 
 *(Update this table as you deploy to additional networks.)*
+
+> Note: the two BSC/Sepolia addresses being identical at first is a coincidence
+> of matching deployer nonces on both chains at deploy time — it does not mean
+> the contracts are linked in any way. Each is fully independent. See
+> [`cast nonce`](https://book.getfoundry.sh/reference/cast/cast-nonce) to check
+> a wallet's transaction count on a given chain.
 
 ## Security
 
