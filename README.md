@@ -197,6 +197,56 @@ Kept live for reference; not maintained further.
 
 ## Security
 
+### Security analysis: common vulnerability classes
+
+A written analysis of why this contract is not exposed to the vulnerability
+classes most often responsible for real-world exploits, referencing the
+actual code rather than asserting safety in the abstract.
+
+**Reentrancy** — A malicious contract calls back into this contract mid-
+transaction, before the first call finishes, manipulating state twice.
+Reentrancy requires an external call to happen *before* state is updated.
+`MyToken` never sends ETH and never calls another contract — every function
+(`mint`, `pause`, `transfer`, `burn`) only updates internal mappings
+directly. There is no external call for an attacker to hijack, so this
+class does not apply. It would become relevant if a future version added a
+function like `buyTokens() payable` that forwards ETH elsewhere — at that
+point, OpenZeppelin's `ReentrancyGuard` should be added around it.
+
+**Integer overflow/underflow** — Arithmetic silently wraps around (e.g.
+`0 - 1` becoming a huge number), the root cause of several historical
+exploits. Solidity `^0.8.20` (the version this project pins to) reverts
+automatically on any overflowing or underflowing operation — this is a
+language-level guarantee since 0.8.0, not something this contract has to
+implement. The separate "SafeMath" library required in older Solidity is
+obsolete for this codebase.
+
+**Access control bugs** — A function meant to be restricted (minting,
+pausing, admin actions) is accidentally left callable by anyone.
+`mint()`, `pause()`, and `unpause()` are all gated by `onlyOwner`, verified
+directly by `testOnlyOwnerCanMint()` (confirms a non-owner call reverts).
+Ownership itself uses `Ownable2Step` rather than plain `Ownable`, so a
+mistyped or unreachable new-owner address during a transfer cannot
+permanently lock out the real owner — the old owner keeps control until the
+new owner explicitly calls `acceptOwnership()`. This was demonstrated live:
+see [Transferring ownership](#transferring-ownership).
+
+**Unbounded minting / inflation** — An owner (or compromised owner key)
+mints unlimited tokens, destroying holder value. `mint()` checks against an
+immutable `maxSupply` set at deployment and can never be changed afterward;
+exceeding it reverts with `MaxSupplyExceeded`, tested in
+`testCannotMintPastMaxSupply()`.
+
+**Single point of failure in ownership** — One private key controls all
+admin functions; if it's lost or compromised, so is the contract.
+Mitigated on Sepolia via a [Gnosis Safe](https://safe.global/) multisig
+(see below) — not yet mitigated on BSC/Polygon testnets for the platform
+reason noted in the checklist.
+
+This analysis was produced by reasoning about the actual code plus
+automated static analysis (Slither); it has not been reviewed by an
+independent human auditor — see the checklist below for when that matters.
+
 Completed hardening for this contract:
 
 - ✅ Built on OpenZeppelin's audited `ERC20`, `ERC20Burnable`, `ERC20Pausable`, `Ownable2Step`
