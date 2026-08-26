@@ -13,7 +13,10 @@ mainnet equivalent) by swapping the `--rpc-url` flag and `.env` values.
 - **Burnable** — token holders can burn their own balance
 - **Pausable** — owner can freeze all transfers in an emergency
 - **Supply-capped minting** — owner can mint new tokens, but never past `maxSupply`
-- **Ownable** — single-owner access control (swap for a multisig in production, see [Security](#security))
+- **Two-step ownership (`Ownable2Step`)** — transferring ownership requires the new owner to explicitly accept, preventing accidental, irreversible loss of control from a mistyped address
+- **Custom errors + zero-address guards** — gas-efficient reverts with no unguarded zero-address paths in constructor or `mint()`
+- **Fully NatSpec-documented** — every function and error has doc comments, matching the verified source on each explorer
+- Static analysis run with [Slither](https://github.com/crytic/slither) — no High/Medium findings in `src/MyToken.sol` (see [Security](#security))
 
 ## Project structure
 
@@ -122,34 +125,73 @@ forge script script/DeployMyToken.s.sol:DeployMyToken --rpc-url <network> --broa
 This step is optional — a repeated address across chains causes no technical
 issue and does not link the contracts in any way. It's purely cosmetic.
 
+## Transferring ownership
+
+Ownership uses OpenZeppelin's `Ownable2Step`, so handing off control (e.g. to
+a multisig) takes two transactions, not one:
+
+```bash
+# 1. Current owner proposes the new owner — ownership does NOT change yet
+cast send <CONTRACT_ADDRESS> "transferOwnership(address)" <NEW_OWNER_ADDRESS> \
+  --rpc-url <network> --private-key $PRIVATE_KEY
+
+# 2. New owner must explicitly accept, from their OWN key
+cast send <CONTRACT_ADDRESS> "acceptOwnership()" \
+  --rpc-url <network> --private-key <NEW_OWNER_PRIVATE_KEY>
+
+# Check current owner / pending owner at any time:
+cast call <CONTRACT_ADDRESS> "owner()(address)" --rpc-url <network>
+cast call <CONTRACT_ADDRESS> "pendingOwner()(address)" --rpc-url <network>
+```
+
+If step 2 never happens, ownership stays exactly where it was — a mistyped
+or unreachable new-owner address cannot lock you out, unlike plain `Ownable`.
+
 ## Deployed addresses
+
+### Current — production-hardened (Ownable2Step, custom errors, NatSpec)
+
+| Network              | Address                                       | Explorer |
+|-----------------------|------------------------------------------------|----------|
+| Sepolia (testnet)     | `0x4602E3EDc16d24457C7Af5f286e89a43e7575119`   | [View](https://sepolia.etherscan.io/address/0x4602e3edc16d24457c7af5f286e89a43e7575119#code) |
+| BSC Testnet           | `0x4602E3EDc16d24457C7Af5f286e89a43e7575119`   | [View](https://testnet.bscscan.com/address/0x4602e3edc16d24457c7af5f286e89a43e7575119#code) |
+| Polygon Amoy (testnet)| `0x9025521D790e5a507918eCe466eD66023f2C553C`   | [View](https://amoy.polygonscan.com/address/0x9025521d790e5a507918ece466ed66023f2c553c#code) |
+
+### Superseded — earlier version (plain `Ownable`, string reverts)
+
+Kept live for reference; not maintained further.
 
 | Network              | Address                                       | Status     | Explorer |
 |-----------------------|------------------------------------------------|------------|----------|
-| Sepolia (testnet)     | `0x91f5B7e55226f983f52B7878671e668C5d4880f3`   | Active     | [View](https://sepolia.etherscan.io/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
-| BSC Testnet           | `0x91f5B7e55226f983f52B7878671e668C5d4880f3`   | ⏸ Paused (deprecated) | [View](https://testnet.bscscan.com/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
-| BSC Testnet           | `0x9025521D790e5a507918eCe466eD66023f2C553C`   | Active     | [View](https://testnet.bscscan.com/address/0x9025521d790e5a507918ece466ed66023f2c553c#code) |
-| Polygon Amoy (testnet)| `0x91f5B7e55226f983f52B7878671e668C5d4880f3`   | Active     | [View](https://amoy.polygonscan.com/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
+| Sepolia (testnet)     | `0x91f5B7e55226f983f52B7878671e668C5d4880f3`   | Superseded | [View](https://sepolia.etherscan.io/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
+| BSC Testnet           | `0x91f5B7e55226f983f52B7878671e668C5d4880f3`   | ⏸ Paused, superseded | [View](https://testnet.bscscan.com/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
+| BSC Testnet           | `0x9025521D790e5a507918eCe466eD66023f2C553C`   | Superseded | [View](https://testnet.bscscan.com/address/0x9025521d790e5a507918ece466ed66023f2c553c#code) |
+| Polygon Amoy (testnet)| `0x91f5B7e55226f983f52B7878671e668C5d4880f3`   | Superseded | [View](https://amoy.polygonscan.com/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
 
-*(Update this table as you deploy to additional networks. New deployments
-that follow the nonce-bump step above will get unique addresses.)*
+*(Update these tables as you deploy to additional networks.)*
 
-> Note: several addresses above being identical is a coincidence of matching
-> deployer nonces (all `0`) at deploy time on their respective chains — it
-> does not mean the contracts are linked in any way. Each deployment is
-> fully independent on-chain. See
+> Note: several addresses above being identical across chains is a
+> coincidence of matching deployer nonces at deploy time — it does not mean
+> the contracts are linked in any way. Each deployment is fully independent
+> on-chain. See
 > [`cast nonce`](https://book.getfoundry.sh/reference/cast/cast-nonce) to
 > check a wallet's transaction count on a given chain.
 
 ## Security
 
-This contract is suitable for testnets and learning purposes as-is. Before
-any mainnet deployment involving real value:
+Completed hardening for this contract:
 
-- Replace the `Ownable` owner with a multisig (e.g. [Gnosis Safe](https://safe.global/)) rather than a single EOA
-- Run static analysis with [Slither](https://github.com/crytic/slither)
-- Get an independent security audit
-- Test extensively on testnet, including edge cases (max supply, pause/unpause, zero-value transfers)
+- ✅ Built on OpenZeppelin's audited `ERC20`, `ERC20Burnable`, `ERC20Pausable`, `Ownable2Step`
+- ✅ Two-step ownership transfer (see [Transferring ownership](#transferring-ownership))
+- ✅ Custom errors + zero-address checks in constructor and `mint()`
+- ✅ Full NatSpec documentation
+- ✅ Static analysis run with [Slither](https://github.com/crytic/slither) — `slither src/MyToken.sol` reports no High/Medium findings
+
+Still required before any mainnet deployment involving real value:
+
+- Replace the single-EOA owner with a multisig (e.g. [Gnosis Safe](https://safe.global/))
+- Get an independent, professional security audit — Slither and OpenZeppelin's own audits do not substitute for a human review of this contract's specific logic
+- Test extensively on testnet, including edge cases (max supply, pause/unpause, zero-value transfers, ownership transfer)
 - Rotate any private key that has ever been shared, pasted, or committed anywhere
 - Verify every deployment on its block explorer immediately after deploy
 

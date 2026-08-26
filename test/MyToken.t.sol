@@ -28,8 +28,14 @@ contract MyTokenTest is Test {
     }
 
     function testCannotMintPastMaxSupply() public {
-        vm.expectRevert(MyToken.MaxSupplyExceeded.selector);
-        token.mint(alice, MAX_SUPPLY); // would exceed cap
+    vm.expectRevert(
+        abi.encodeWithSelector(
+            MyToken.MaxSupplyExceeded.selector,
+            MAX_SUPPLY,
+            MAX_SUPPLY - INITIAL_SUPPLY
+        )
+    );
+    token.mint(alice, MAX_SUPPLY); // would exceed cap
     }
 
     function testOnlyOwnerCanMint() public {
