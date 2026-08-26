@@ -93,6 +93,35 @@ For mainnet, use the corresponding mainnet network name (`ethereum`,
 `arbitrum`, `bsc`, `polygon`, `celo`) with a properly secured, funded
 production wallet.
 
+## Deploying to a brand-new chain for the first time
+
+A wallet's very first transaction on any chain always uses nonce `0`, and a
+contract's address is computed from `(deployer address, deployer nonce)` —
+chain ID plays no part in that formula. This means the *first* contract you
+ever deploy from a given wallet will land on the **same address on every
+chain** where that wallet has never transacted before.
+
+If you'd prefer each deployment to get its own unique address (matching how
+most real-world multichain tokens end up looking, simply through incidental
+prior wallet activity), send one throwaway transaction to bump the nonce
+**before** your real deploy:
+
+```bash
+# 1. Fund the wallet from that chain's faucet first (needed for gas either way)
+
+# 2. Confirm funds arrived
+cast balance <YOUR_WALLET_ADDRESS> --rpc-url <network>
+
+# 3. Bump the nonce with a trivial self-transfer
+cast send <YOUR_WALLET_ADDRESS> --value 1 --rpc-url <network> --private-key $PRIVATE_KEY
+
+# 4. Now deploy — this will produce a fresh, unique address
+forge script script/DeployMyToken.s.sol:DeployMyToken --rpc-url <network> --broadcast --verify
+```
+
+This step is optional — a repeated address across chains causes no technical
+issue and does not link the contracts in any way. It's purely cosmetic.
+
 ## Deployed addresses
 
 | Network              | Address                                       | Status     | Explorer |
@@ -100,14 +129,17 @@ production wallet.
 | Sepolia (testnet)     | `0x91f5B7e55226f983f52B7878671e668C5d4880f3`   | Active     | [View](https://sepolia.etherscan.io/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
 | BSC Testnet           | `0x91f5B7e55226f983f52B7878671e668C5d4880f3`   | ⏸ Paused (deprecated) | [View](https://testnet.bscscan.com/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
 | BSC Testnet           | `0x9025521D790e5a507918eCe466eD66023f2C553C`   | Active     | [View](https://testnet.bscscan.com/address/0x9025521d790e5a507918ece466ed66023f2c553c#code) |
+| Polygon Amoy (testnet)| `0x91f5B7e55226f983f52B7878671e668C5d4880f3`   | Active     | [View](https://amoy.polygonscan.com/address/0x91f5b7e55226f983f52b7878671e668c5d4880f3#code) |
 
-*(Update this table as you deploy to additional networks.)*
+*(Update this table as you deploy to additional networks. New deployments
+that follow the nonce-bump step above will get unique addresses.)*
 
-> Note: the two BSC/Sepolia addresses being identical at first is a coincidence
-> of matching deployer nonces on both chains at deploy time — it does not mean
-> the contracts are linked in any way. Each is fully independent. See
-> [`cast nonce`](https://book.getfoundry.sh/reference/cast/cast-nonce) to check
-> a wallet's transaction count on a given chain.
+> Note: several addresses above being identical is a coincidence of matching
+> deployer nonces (all `0`) at deploy time on their respective chains — it
+> does not mean the contracts are linked in any way. Each deployment is
+> fully independent on-chain. See
+> [`cast nonce`](https://book.getfoundry.sh/reference/cast/cast-nonce) to
+> check a wallet's transaction count on a given chain.
 
 ## Security
 
