@@ -209,7 +209,7 @@ Completed hardening for this contract:
 
 Still required before any mainnet deployment involving real value:
 
-- Transfer BSC Testnet and Polygon Amoy ownership to a multisig too (currently still single-EOA on those two)
+- Transfer ownership to a multisig on BSC and Polygon **mainnet** when deploying there — Gnosis Safe's web app does not support BSC Testnet or Polygon Amoy specifically (testnet coverage is limited to a smaller set of chains, mainly Ethereum testnets), so those two stay single-EOA for now; this is a real platform limitation, not a shortcut
 - Raise the Safe's threshold above 1-of-2 for real production use — 1-of-2 was chosen for ease of testing, not for production security
 - Get an independent, professional security audit — Slither and OpenZeppelin's own audits do not substitute for a human review of this contract's specific logic
 - Rotate any private key that has ever been shared, pasted, or committed anywhere
